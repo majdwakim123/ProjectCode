@@ -1,1 +1,134 @@
+// the Echo and Trig for ultra sonic sensor.
+#define echoPin 5  // Echo
+#define trigPin 4  // Trig
+long duration, Distance ; // Time that sound taked to travel, and the distance from the nect object
 
+// RemoteXY select connection mode and include library
+#define REMOTEXY_MODE__SOFTSERIAL
+#include <SoftwareSerial.h>
+#include <RemoteXY.h>
+
+// RemoteXY connection settings
+#define REMOTEXY_SERIAL_RX 2
+#define REMOTEXY_SERIAL_TX 3
+#define REMOTEXY_SERIAL_SPEED 9600
+
+
+// RemoteXY configurate
+#pragma pack(push, 1)
+uint8_t RemoteXY_CONF[] = { 255,3,0,0,0,29,0,8,13,0,2,0,8,4,22,11,2,26,31,31,
+                            79,78,0,79,70,70,0,5,16,42, 8,47,47,2,26,31};
+// this structure defines all the variables of your control interface
+struct {
+    // input variable
+  uint8_t switch_1; // =1 if switch ON and =0 if OFF
+  int8_t joystick_1_x; // =-100..100 x-coordinate joystick position
+  int8_t joystick_1_y; // =-100..100 y-coordinate joystick position
+
+    // other variable
+  uint8_t connect_flag;  // =1 if wire connected, else =0
+
+} RemoteXY;
+#pragma pack(pop)
+// End RemoteXY including the liberary
+
+#define PIN_SWITCH_1 13
+
+// Define right mototr control pins
+#define right_motor_A 8
+#define right_motor_B 9
+#define right_motor_speed 11 // enable pin
+
+// define leftmotor control pins
+#define left_motor_A 6
+#define left_motor_B 7
+#define left_motor_speed 10 // enable pin
+
+// define two arrays with a list of pins for each motor
+uint8_t RightMotor[3] = {right_motor_A, right_motor_B, right_motor_speed};
+uint8_t LeftMotor[3] = {left_motor_A, left_motor_B, left_motor_speed};
+
+// speed control of motors // v = motor speed, motor = pointer to an array of pins
+void Wheel (uint8_t * motor, int v){
+  if(v > 100) v = 100;
+  if(v < -100) v = -100;
+  if(v > 0){
+    digitalWrite (motor [0], HIGH);
+    digitalWrite (motor [1], LOW);
+    digitalWrite (motor [2], v * 2.55);
+   }
+   else if(v < 0){
+    digitalWrite (motor [0], LOW);
+    digitalWrite (motor [1], HIGH);
+    digitalWrite (motor [2], (-v) * 2.55);
+   }
+   else{
+      digitalWrite (motor [0], LOW);
+      digitalWrite (motor [1], LOW);
+      digitalWrite (motor [2], 0);
+    }
+}
+/*
+void turn (uint8_t * motor, int v){
+     if(v > 0){
+    digitalWrite (motor [0], LOW);
+    digitalWrite (motor [1], LOW);
+    delay(500);
+    digitalWrite (motor [0], HIGH);
+    delay(300);
+    digitalWrite (motor [1], LOW);
+    digitalWrite (motor [2], v = -50);
+
+   }
+   */
+  void Turn(){
+    Wheel (RightMotor, 0);
+    Wheel (LeftMotor,0);
+    delay(500);
+    Wheel (RightMotor,1);
+    Wheel (LeftMotor,-1);
+    delay(1000);
+    Wheel (RightMotor,0);
+    Wheel (LeftMotor,0);
+    delay(500);
+}
+
+void setup(){
+  Serial.begin(9600);
+  pinMode(echoPin, INPUT);
+  pinMode(trigPin, OUTPUT);
+
+  RemoteXY_Init ();
+  pinMode (PIN_SWITCH_1, OUTPUT);
+  // initializing pins
+  pinMode (right_motor_A, OUTPUT);
+  pinMode (right_motor_B, OUTPUT);
+  pinMode (left_motor_A, OUTPUT);
+  pinMode (left_motor_B, OUTPUT);
+}
+
+void loop(){
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(5);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  pinMode(echoPin, INPUT);
+  duration = pulseIn(echoPin, HIGH);
+  Distance = (duration/(2* 29.1));
+  Serial.println(Distance)  ;
+
+  if ( Distance < 20 ){
+   Turn();
+  }else{
+    RemoteXY_Handler ();
+    digitalWrite(PIN_SWITCH_1, (RemoteXY.switch_1==0)?LOW:HIGH);
+    Serial.println(RemoteXY.joystick_1_y )  ;
+    Serial.println(RemoteXY.joystick_1_x)  ;
+    // manage the right motor
+    Wheel (RightMotor, (RemoteXY.joystick_1_y - RemoteXY.joystick_1_x ) );
+    // manage the left motor
+    Wheel (LeftMotor, ( RemoteXY.joystick_1_y + RemoteXY.joystick_1_x  ));
+  }
+}
