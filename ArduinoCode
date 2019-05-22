@@ -1,12 +1,8 @@
-// the Echo and Trig for ultra sonic sensor.
-#define echoPin 5  // Echo
-#define trigPin 4  // Trig
-long duration, Distance ; // Time that sound taked to travel, and the distance from the nect object
-
 // RemoteXY select connection mode and include library
 #define REMOTEXY_MODE__SOFTSERIAL
 #include <SoftwareSerial.h>
 #include <RemoteXY.h>
+int x , y ;
 
 // RemoteXY connection settings
 #define REMOTEXY_SERIAL_RX 2
@@ -24,7 +20,6 @@ struct {
   uint8_t switch_1; // =1 if switch ON and =0 if OFF
   int8_t joystick_1_x; // =-100..100 x-coordinate joystick position
   int8_t joystick_1_y; // =-100..100 y-coordinate joystick position
-
     // other variable
   uint8_t connect_flag;  // =1 if wire connected, else =0
 
@@ -68,35 +63,9 @@ void Wheel (uint8_t * motor, int v){
       digitalWrite (motor [2], 0);
     }
 }
-/*
-void turn (uint8_t * motor, int v){
-     if(v > 0){
-    digitalWrite (motor [0], LOW);
-    digitalWrite (motor [1], LOW);
-    delay(500);
-    digitalWrite (motor [0], HIGH);
-    delay(300);
-    digitalWrite (motor [1], LOW);
-    digitalWrite (motor [2], v = -50);
-
-   }
-   */
-  void Turn(){
-    Wheel (RightMotor, 0);
-    Wheel (LeftMotor,0);
-    delay(500);
-    Wheel (RightMotor,1);
-    Wheel (LeftMotor,-1);
-    delay(1000);
-    Wheel (RightMotor,0);
-    Wheel (LeftMotor,0);
-    delay(500);
-}
 
 void setup(){
   Serial.begin(9600);
-  pinMode(echoPin, INPUT);
-  pinMode(trigPin, OUTPUT);
 
   RemoteXY_Init ();
   pinMode (PIN_SWITCH_1, OUTPUT);
@@ -108,27 +77,32 @@ void setup(){
 }
 
 void loop(){
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(5);
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-
-  pinMode(echoPin, INPUT);
-  duration = pulseIn(echoPin, HIGH);
-  Distance = (duration/(2* 29.1));
-  Serial.println(Distance)  ;
-
-  if ( Distance < 20 ){
-   Turn();
-  }else{
     RemoteXY_Handler ();
     digitalWrite(PIN_SWITCH_1, (RemoteXY.switch_1==0)?LOW:HIGH);
-    Serial.println(RemoteXY.joystick_1_y )  ;
-    Serial.println(RemoteXY.joystick_1_x)  ;
+      /*
+    Serial.print(RemoteXY.joystick_1_x)  ;
+    Serial.print("\t");
+    Serial.print(RemoteXY.joystick_1_y )  ;
+    Serial.println("\t");
+    */
+    x = RemoteXY.joystick_1_x ;
+    y = RemoteXY.joystick_1_y ;
+    if(x > 50 && y < 50 && y > -50){
+       Serial.println("F")  ;
+    }
+    else if(x < -50 && y < 50 && y > -50){
+       Serial.println("B")  ;
+    }
+    else if(x < 50 && x > -50 && y < -50){
+       Serial.println("R")  ;
+    }
+    else if(x < 50 && x > -50 && y >50){
+       Serial.println("L")  ;
+    }
+    delay(1000) ;
     // manage the right motor
     Wheel (RightMotor, (RemoteXY.joystick_1_y - RemoteXY.joystick_1_x ) );
     // manage the left motor
     Wheel (LeftMotor, ( RemoteXY.joystick_1_y + RemoteXY.joystick_1_x  ));
-  }
+//  }
 }
