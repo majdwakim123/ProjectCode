@@ -1,4 +1,4 @@
-  
+
 import serial
 import time
 import MySQLdb as mdb
@@ -9,17 +9,15 @@ arduino.baudrate = 9600
 date = arduino.readline()
 time.sleep(1)
 data = arduino.readline()
-pieces = data.split("\t")
+pieces = data.split("\n")
 
 X = pieces[0]
-Y = pieces[0]
-
 
 con = mdb.connect('localhost','root' , 'zak95', 'Testdb');
 
 with con:
     
     cursor = con.cursor()
-    cursor.execute("""INSERT INTO sensor VALUES('','' ,%s,%s)""" , ( X , Y))
+    cursor.execute("""INSERT INTO sensor VALUES('', %s)""" , (X))
     con.commit()
     cursor.close()
